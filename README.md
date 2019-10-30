@@ -1,5 +1,5 @@
 # Minimal command line interface for manual perturbation of Quoref(-like) datapoints
-This repository contains a simple script written in Python3 that takes a [Quoref](https://allennlp.org/quoref) data file with answers in the official json format, and provides an interactive tool to enter new question-answer pairs that are expected to be perturbations of the questions in the dataset. This code was tested with the Quoref dataset, but since its format is the same as that of SQuAD, it _should_ work for SQuAD as well.
+This repository contains a simple script written in Python3 that takes a [Quoref](https://allennlp.org/quoref) data file with answers in the official json format, and provides an interactive tool to enter new question-answer pairs that are expected to be perturbations of the questions in the dataset.
 
 ## Usage
 ```python interface.py /path/to/data.json```
