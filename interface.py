@@ -26,6 +26,20 @@ def get_answers(context):
     return new_answers
 
 
+def get_new_passage(context):
+    while True:
+        string_to_replace = input("Enter a unique string from the passage that you want to change: ")
+        num_occurrences = len(re.findall(string_to_replace, context))
+        if num_occurrences == 0:
+            print("The string you entered does not occur in the passage. Please try again!")
+        elif num_occurrences > 1:
+            print("The string you entered is not unique. Please try again!")
+        else:
+            replacement = input("Enter a replacement: ")
+            new_context = context.replace(string_to_replace, replacement)
+            return new_context
+
+
 def add_perturbations(data):
     data_indices = list(range(len(data["data"])))
     random.shuffle(data_indices)
@@ -35,6 +49,7 @@ def add_perturbations(data):
             question_ids = {qa_info["id"] for qa_info in paragraph_info["qas"]}
             print("\nContext:")
             context = paragraph_info["context"]
+            context_id = paragraph_info["context_id"]
             print(context)
             qa_indices = list(range(len(paragraph_info["qas"])))
             random.shuffle(qa_indices)
@@ -44,10 +59,12 @@ def add_perturbations(data):
                     # This is a perturbed instance. Let's not perturb it further.
                     continue
                 original_id = qa_info["id"]
-                print(f"\nQuestion: {qa_info['question']}")
+                question = qa_info['question']
+                print(f"\nQuestion: {question}")
                 print(f"Answers: {[a['text'] for a in qa_info['answers']]}")
-                response = input("Type a new question, hit enter to skip, or type 'exit' to end session: ")
-                if len(response) > 0 and response.lower() != 'exit':
+                print("You can modify the question or the passage, skip to the next question, or exit.")
+                response = input("Type a new question, hit enter to skip, type 'p' to edit passsage or 'exit' to end session: ")
+                if len(response) > 1 and response.lower() != 'exit':
                     perturbed_question = response.strip()
                     new_id = hashlib.sha1(f"{context} {perturbed_question}".encode()).hexdigest()
                     if new_id not in question_ids:
@@ -63,6 +80,22 @@ def add_perturbations(data):
                 elif response.lower() == 'exit':
                     print("Ending session. Thank you!")
                     return
+                elif response.lower() == "p":
+                    perturbed_context = get_new_passage(context)
+                    new_context_id = hashlib.sha1(perturbed_context.encode()).hexdigest()
+                    print(f"New context: {perturbed_context}\n")
+                    new_id = hashlib.sha1(f"{perturbed_context} {question}".encode()).hexdigest()
+                    new_answers = get_answers(perturbed_context)
+                    if new_answers:
+                        new_qa_info = {"question": question,
+                                       "id": new_id,
+                                       "answers": new_answers,
+                                       "original_id": original_id}
+                    new_paragraph_info = {"context": perturbed_context,
+                                          "qas": [new_qa_info],
+                                          "context_id": new_context_id,
+                                          "original_context_id": context_id}
+                    datum["paragraphs"].append(new_paragraph_info)
 
 
 def main():
