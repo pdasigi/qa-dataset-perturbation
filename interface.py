@@ -52,6 +52,7 @@ def get_perturbed_info_for_article(datum):
     new_qas = []
     new_paragraphs = []
     end_session = False
+    num_new_instances = 0
     for paragraph_index, paragraph_info in enumerate(datum["paragraphs"]):
         if end_session:
             break
@@ -84,11 +85,12 @@ def get_perturbed_info_for_article(datum):
                                        "answers": new_answers,
                                        "original_id": original_id}
                         new_qas.append((paragraph_index, new_qa_info))
+                        num_new_instances += 1
                 else:
                     print("This question exists in the dataset! Please try again.\n")
             elif response.lower() == 'exit':
                 end_session = True
-                print("Ending session. Thank you!")
+                print(f"\nEnding session. You generated {num_new_instances} new instance(s). Thank you!")
                 break
             elif response.lower() == "p":
                 perturbed_context = get_new_passage(context)
@@ -101,11 +103,12 @@ def get_perturbed_info_for_article(datum):
                                    "id": new_id,
                                    "answers": new_answers,
                                    "original_id": original_id}
-                new_paragraph_info = {"context": perturbed_context,
-                                      "qas": [new_qa_info],
-                                      "context_id": new_context_id,
-                                      "original_context_id": context_id}
-                new_paragraphs.append(new_paragraph_info)
+                    new_paragraph_info = {"context": perturbed_context,
+                                          "qas": [new_qa_info],
+                                          "context_id": new_context_id,
+                                          "original_context_id": context_id}
+                    new_paragraphs.append(new_paragraph_info)
+                    num_new_instances += 1
     return new_qas, new_paragraphs, end_session
 
 
