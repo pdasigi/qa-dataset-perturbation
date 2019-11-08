@@ -90,7 +90,6 @@ def get_perturbed_info_for_article(datum):
                     print("This question exists in the dataset! Please try again.\n")
             elif response.lower() == 'exit':
                 end_session = True
-                print(f"\nEnding session. You generated {num_new_instances} new instance(s). Thank you!")
                 break
             elif response.lower() == "p":
                 perturbed_context = get_new_passage(context)
@@ -109,7 +108,7 @@ def get_perturbed_info_for_article(datum):
                                           "original_context_id": context_id}
                     new_paragraphs.append(new_paragraph_info)
                     num_new_instances += 1
-    return new_qas, new_paragraphs, end_session
+    return new_qas, new_paragraphs, end_session, num_new_instances
 
 
 def add_perturbations(data):
@@ -118,9 +117,11 @@ def add_perturbations(data):
     """
     data_indices = list(range(len(data["data"])))
     random.shuffle(data_indices)
+    num_new_instances = 0
     for datum_index in data_indices:
         datum = data["data"][datum_index]
-        new_qa_info, new_paragraphs, end_session = get_perturbed_info_for_article(datum)
+        new_qa_info, new_paragraphs, end_session, num_instances = get_perturbed_info_for_article(datum)
+        num_new_instances += num_instances
         for paragraph_index, qa_info in new_qa_info:
             datum["paragraphs"][paragraph_index]["qas"].append(qa_info)
 
@@ -128,6 +129,7 @@ def add_perturbations(data):
             datum["paragraphs"].append(paragraph_info)
 
         if end_session:
+            print(f"\nEnding session. You generated {num_new_instances} new instance(s). Thank you!")
             break
 
 
@@ -140,7 +142,8 @@ def get_perturbations(data):
     random.shuffle(data_indices)
     for datum_index in data_indices:
         datum = data["data"][datum_index]
-        new_qa_info, new_paragraphs, end_session = get_perturbed_info_for_article(datum)
+        new_qa_info, new_paragraphs, end_session, num_instances = get_perturbed_info_for_article(datum)
+        num_new_instances += num_instances
         if new_qa_info or new_paragraphs:
             paragraphs_info = defaultdict(lambda: {'qas': []})
             for paragraph_index, qa_info in new_qa_info:
@@ -155,6 +158,7 @@ def get_perturbations(data):
                                            'url': datum['url'],
                                            'paragraphs': list(paragraphs_info.values())})
         if end_session:
+            print(f"\nEnding session. You generated {num_new_instances} new instance(s). Thank you!")
             break
     return perturbed_data
 
@@ -162,11 +166,11 @@ def get_perturbations(data):
 def main(args):
     input_filename = args.input
     data = json.load(open(input_filename))
-    if args.include_original_data:
+    if args.output_perturbations_only:
+        perturbed_data = get_perturbations(data)
+    else:
         add_perturbations(data)
         perturbed_data = data
-    else:
-        perturbed_data = get_perturbations(data)
     filename_prefix = input_filename.split("/")[-1].split(".")[0]
     # Removing previous timestamp if any
     filename_prefix = re.sub('_2019[0-9]*$', '', filename_prefix)
@@ -183,10 +187,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('input', type=str, help='''Location of input file. If you want to continue your work from a
                         previous session, provide the output from that session as the input here. If
-                        '--include-original-data' is set, the resulting dataset from this session will contain a
+                        '--output-perturbations-only' is not set, the resulting dataset from this session will contain a
                         union of your perturbations from both sessions.''')
-    parser.add_argument('--include-original-data', dest='include_original_data', action='store_true',
-                        help='''If this flag is set, the output will also contain instances from the input file.
-                        The new instances will contain references to the original instances.''')
+    parser.add_argument('--output-perturbations-only', dest='output_perturbations_only', action='store_true',
+                        help='''If this flag is set, the output will not contain instances from the input file.
+                        It will only have perturbations, but they will still have references to the original instances.''')
     args = parser.parse_args()
     main(args)
