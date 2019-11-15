@@ -70,44 +70,51 @@ def get_perturbed_info_for_article(datum):
                 continue
             original_id = qa_info["id"]
             question = qa_info['question']
-            print(f"\nQuestion: {question}")
+            print(f"\nNEW QUESTION FOR THE ABOVE CONTEXT: {question}")
             print(f"Answers: {[a['text'] for a in qa_info['answers']]}")
             print("You can modify the question or the passage, skip to the next question, or exit.")
             response = input("Type a new question, hit enter to skip, type 'p' to edit passsage or 'exit' to end session: ")
-            if len(response) > 1 and response.lower() != 'exit':
-                perturbed_question = response.strip()
-                new_id = hashlib.sha1(f"{context} {perturbed_question}".encode()).hexdigest()
-                if new_id not in question_ids:
-                    new_answers = get_answers(context)
+            while len(response) > 0 and response.lower() != 'exit':
+                if len(response) > 1:
+                    perturbed_question = response.strip()
+                    new_id = hashlib.sha1(f"{context} {perturbed_question}".encode()).hexdigest()
+                    if new_id not in question_ids:
+                        new_answers = get_answers(context)
+                        if new_answers:
+                            new_qa_info = {"question": perturbed_question,
+                                           "id": new_id,
+                                           "answers": new_answers,
+                                           "original_id": original_id}
+                            new_qas.append((paragraph_index, new_qa_info))
+                            num_new_instances += 1
+                    else:
+                        print("This question exists in the dataset! Please try again.\n")
+                elif response.lower() == "p":
+                    perturbed_context = get_new_passage(context)
+                    new_context_id = hashlib.sha1(perturbed_context.encode()).hexdigest()
+                    print(f"New context: {perturbed_context}\n")
+                    new_id = hashlib.sha1(f"{perturbed_context} {question}".encode()).hexdigest()
+                    new_answers = get_answers(perturbed_context)
                     if new_answers:
-                        new_qa_info = {"question": perturbed_question,
+                        new_qa_info = {"question": question,
                                        "id": new_id,
                                        "answers": new_answers,
                                        "original_id": original_id}
-                        new_qas.append((paragraph_index, new_qa_info))
+                        new_paragraph_info = {"context": perturbed_context,
+                                              "qas": [new_qa_info],
+                                              "context_id": new_context_id,
+                                              "original_context_id": context_id}
+                        new_paragraphs.append(new_paragraph_info)
                         num_new_instances += 1
                 else:
-                    print("This question exists in the dataset! Please try again.\n")
-            elif response.lower() == 'exit':
+                    print(f"Unrecognized input: {response}")
+                print(f"\nSTILL MODIFYING THE SAME QUESTION: {question}")
+                print(f"Answers: {[a['text'] for a in qa_info['answers']]}")
+                print("You can modify the question or the passage, move on to the next question, or exit.")
+                response = input("Type a new question, hit enter to move on, type 'p' to edit passsage or 'exit' to end session: ")
+            if response.lower() == 'exit':
                 end_session = True
                 break
-            elif response.lower() == "p":
-                perturbed_context = get_new_passage(context)
-                new_context_id = hashlib.sha1(perturbed_context.encode()).hexdigest()
-                print(f"New context: {perturbed_context}\n")
-                new_id = hashlib.sha1(f"{perturbed_context} {question}".encode()).hexdigest()
-                new_answers = get_answers(perturbed_context)
-                if new_answers:
-                    new_qa_info = {"question": question,
-                                   "id": new_id,
-                                   "answers": new_answers,
-                                   "original_id": original_id}
-                    new_paragraph_info = {"context": perturbed_context,
-                                          "qas": [new_qa_info],
-                                          "context_id": new_context_id,
-                                          "original_context_id": context_id}
-                    new_paragraphs.append(new_paragraph_info)
-                    num_new_instances += 1
     return new_qas, new_paragraphs, end_session, num_new_instances
 
 
