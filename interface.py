@@ -1,5 +1,4 @@
 import re
-import sys
 import json
 import random
 import hashlib
@@ -147,6 +146,7 @@ def get_perturbations(data):
     perturbed_data = {"data": []}
     data_indices = list(range(len(data["data"])))
     random.shuffle(data_indices)
+    num_new_instances = 0
     for datum_index in data_indices:
         datum = data["data"][datum_index]
         new_qa_info, new_paragraphs, end_session, num_instances = get_perturbed_info_for_article(datum)
